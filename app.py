@@ -1,5 +1,7 @@
 import urllib.parse
-import gradio as gr
+from flask import Flask, jsonify, render_template_string, request
+
+app = Flask(__name__)
 
 katalog = {
     "KAHVALTILIK & SÜT": [
@@ -198,61 +200,87 @@ katalog = {
     ],
 }
 
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Öğretmenime Hediye</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    </style>
+</head>
+<body class="p-4 max-w-2xl mx-auto">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
+        <h1 class="text-3xl font-bold text-slate-800 mb-4">Öğretmenime Hediye</h1>
+        
+        <form id="listForm" class="space-y-3">
+            {% for kategori, urunler in katalog.items() %}
+            <details class="border border-slate-200 rounded-lg p-3 bg-slate-50 group">
+                <summary class="font-semibold text-slate-700 cursor-pointer list-none flex justify-between items-center">
+                    <span>{{ kategori }}</span>
+                    <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div class="mt-3 grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                    {% for urun in urunler %}
+                    <label class="flex items-center space-x-2 text-sm text-slate-600 bg-white p-2 rounded border border-slate-100 cursor-pointer">
+                        <input type="checkbox" name="secilenler" value="{{ urun }}" class="w-4 h-4 text-blue-600 rounded">
+                        <span>{{ urun }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
 
-def liste_olustur(*secilenler):
-    toplam_liste = []
-    for s in secilenler:
-        if isinstance(s, list) and len(s) > 0:
-            toplam_liste.extend(s)
+            <button type="button" onclick="hazirla()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition duration-150">
+                📋 LİSTEYİ HAZIRLA
+            </button>
+        </form>
+    </div>
 
-    if not toplam_liste:
-        return "Henüz bir şey seçilmedi.", ""
-
-    mesaj = "Seçilen Ürün Listesi:\n\n" + "\n".join(
-        [f"• {item}" for item in toplam_liste]
-    )
-    whatsapp_link = f"https://wa.me/?text={urllib.parse.quote(mesaj)}"
-
-    paylas_html = f"""
-        <div style="text-align: center; margin-top: 20px;">
-            <a href="{whatsapp_link}" target="_blank"
-                style="padding: 18px 30px; background-color: #1976d2; color: white;
-                text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block; font-size: 18px; box-shadow: 0 4px 15px rgba(25,118,210,0.3);">
-                WHATSAPP İLE GÖNDER
-            </a>
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+        <div>
+            <label class="block font-semibold text-slate-700 mb-2">Seçilen Ürünler</label>
+            <textarea id="onizleme" rows="8" class="w-full p-3 border border-slate-200 rounded-lg bg-slate-50 text-slate-800 font-mono text-sm" readonly></textarea>
         </div>
-    """
-    return mesaj, paylas_html
+        <div id="paylasContainer"></div>
+    </div>
 
+    <script>
+        function hazirla() {
+            const checked = Array.from(document.querySelectorAll('input[name="secilenler"]:checked')).map(cb => cb.value);
+            const onizleme = document.getElementById('onizleme');
+            const paylasContainer = document.getElementById('paylasContainer');
 
-custom_theme = gr.themes.Soft(primary_hue="blue").set(
-    button_primary_background_fill="#1976d2",
-    button_primary_background_fill_hover="#1565c0",
-)
+            if (checked.length === 0) {
+                onizleme.value = "Henüz bir şey seçilmedi.";
+                paylasContainer.innerHTML = "";
+                return;
+            }
 
-with gr.Blocks(theme=custom_theme, title="Öğretmenime Hediye") as demo:
-    gr.Markdown("# Öğretmenime Hediye")
+            const mesaj = "Seçilen Ürün Listesi:\\n\\n" + checked.map(item => "• " + item).join("\\n");
+            onizleme.value = mesaj;
 
-    input_listeleri = []
-    for kategori, urunler in katalog.items():
-        with gr.Accordion(label=kategori, open=False):
-            cb = gr.CheckboxGroup(choices=urunler, label=None)
-            input_listeleri.append(cb)
+            const encoded = encodeURIComponent(mesaj);
+            paylasContainer.innerHTML = `
+                <div class="text-center mt-4">
+                    <a href="https://wa.me/?text=${encoded}" target="_blank" 
+                       class="inline-block px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full shadow-lg transition duration-150 text-lg">
+                        WHATSAPP İLE GÖNDER
+                    </a>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
+"""
 
-    btn = gr.Button("📋 LİSTEYİ HAZIRLA", variant="primary")
-
-    with gr.Column():
-        onizleme = gr.Textbox(label="Seçilen Ürünler", lines=8)
-        paylas_html = gr.HTML()
-
-    btn.click(
-        fn=liste_olustur, inputs=input_listeleri, outputs=[onizleme, paylas_html]
-    )
-
-# Vercel Serverless düzeltmesi (Flagging ve queue kapatıldı, FastAPI app üretildi)
-app = gr.mount_gradio_app(
-    app=gr.FastAPI(), blocks=demo, path="/", analytics_enabled=False
-)
+@app.route("/")
+def index():
+    return render_template_string(HTML_TEMPLATE, katalog=katalog)
 
 if __name__ == "__main__":
-    demo.launch()
+    app.run(debug=True)
