@@ -1,7 +1,6 @@
 import urllib.parse
 import gradio as gr
 
-# Her şeyin olduğu dev liste
 katalog = {
     "KAHVALTILIK & SÜT": [
         "Süt",
@@ -250,8 +249,10 @@ with gr.Blocks(theme=custom_theme, title="Öğretmenime Hediye") as demo:
         fn=liste_olustur, inputs=input_listeleri, outputs=[onizleme, paylas_html]
     )
 
-# Vercel Serverless entegrasyonu
-app = demo.app
+# Vercel Serverless düzeltmesi (Flagging ve queue kapatıldı, FastAPI app üretildi)
+app = gr.mount_gradio_app(
+    app=gr.FastAPI(), blocks=demo, path="/", analytics_enabled=False
+)
 
 if __name__ == "__main__":
     demo.launch()
