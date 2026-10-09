@@ -314,7 +314,7 @@ HTML_TEMPLATE = """
                 return;
             }
 
-            const mesaj = "Seçilen Ürün Listesi:\\n\\n" + checked.map(item => "• " + item).join("\\n");
+            const mesaj = "Evde şunlar eksik:\\n\\n" + checked.map(item => "• " + item).join("\\n");
             onizleme.value = mesaj;
 
             const encoded = encodeURIComponent(mesaj);
