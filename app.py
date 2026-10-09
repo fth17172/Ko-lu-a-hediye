@@ -48,7 +48,7 @@ katalog = {
         "Taze Soğan",
         "Sarımsak",
         "Limon",
-        "Maydanoz",
+        "Maydonoz",
         "Dereotu",
         "Roka",
         "Marul",
@@ -207,14 +207,12 @@ def liste_olustur(*secilenler):
             toplam_liste.extend(s)
 
     if not toplam_liste:
-        return "Henüz bir şey seçilmedi öğretmenim.", ""
+        return "Henüz bir şey seçilmedi.", ""
 
-    mesaj = "Sayın Öğretmenim, listeniz aşağıdaki gibidir:\n\n" + "\n".join(
+    mesaj = "Seçilen Ürün Listesi:\n\n" + "\n".join(
         [f"• {item}" for item in toplam_liste]
     )
-    whatsapp_link = (
-        f"https://wa.me/?text={urllib.parse.quote(mesaj)}"
-    )
+    whatsapp_link = f"https://wa.me/?text={urllib.parse.quote(mesaj)}"
 
     paylas_html = f"""
         <div style="text-align: center; margin-top: 20px;">
@@ -228,17 +226,15 @@ def liste_olustur(*secilenler):
     return mesaj, paylas_html
 
 
-# Öğretmen Teması
 custom_theme = gr.themes.Soft(primary_hue="blue").set(
     button_primary_background_fill="#1976d2",
     button_primary_background_fill_hover="#1565c0",
 )
 
 with gr.Blocks(theme=custom_theme, title="Öğretmenime Hediye") as demo:
-    gr.Markdown("# Öğretmenime Hediye\n*Öğretmenler Gününüz Kutlu Olsun!*")
+    gr.Markdown("# Öğretmenime Hediye")
 
     input_listeleri = []
-    # iPhone 11 ekranı için dikey ve açılır (accordion) yapı
     for kategori, urunler in katalog.items():
         with gr.Accordion(label=kategori, open=False):
             cb = gr.CheckboxGroup(choices=urunler, label=None)
@@ -254,4 +250,8 @@ with gr.Blocks(theme=custom_theme, title="Öğretmenime Hediye") as demo:
         fn=liste_olustur, inputs=input_listeleri, outputs=[onizleme, paylas_html]
     )
 
-demo.launch()
+# Vercel Serverless entegrasyonu
+app = demo.app
+
+if __name__ == "__main__":
+    demo.launch()
